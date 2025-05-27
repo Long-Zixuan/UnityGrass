@@ -3,7 +3,7 @@
 
 struct vertexInput
 {
-	float4 vertex : POSITION;
+	float4 vertex : POSITION;//传入的是模型坐标系下的顶点坐标
 	float3 normal : NORMAL;
 	float4 tangent : TANGENT;
 };

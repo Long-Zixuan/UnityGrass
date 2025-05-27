@@ -22,7 +22,6 @@ float _PlayerRadius;
             
 float4 _TopColor;
 float4 _BottomColor;
-float _TranslucentGain;
 
 // Simple noise function, sourced from http://answers.unity.com/answers/624136/view.html
 // Extended discussion on this function can be found at the following link:
@@ -94,8 +93,10 @@ void grassGeo(triangle vertexOutput IN[3], inout TriangleStream<grassGeometryOut
 	float3x3 bendRotationMatrix = AngleAxis3x3(rand(pos.zzx) * _BendRotationRandom * UNITY_PI * 0.5, float3(-1, 0, 0));
 	float2 uv = pos.xz * _WindDistortionMap_ST.xy + _WindDistortionMap_ST.zw + _WindFrequency * _Time.y;
 
-	float3 playerDir = normalize(_PlayerPos - pos);
-	float playerDistance = distance(_PlayerPos, pos);
+	float3 worldPos = mul(unity_ObjectToWorld, float4(pos, 1)).xyz;
+	
+	float3 playerDir = normalize(_PlayerPos - worldPos);
+	float playerDistance = distance(_PlayerPos, worldPos);
 	float3 playerAixs = GetPerpendicularVector(playerDir);
 	float playerSample = max(_PlayerRadius - playerDistance,0);
 	float3x3 playerRotationMatrix = AngleAxis3x3(UNITY_PI * playerSample, playerAixs);
