@@ -1,6 +1,7 @@
 #include "UnityCG.cginc"
 #include "Autolight.cginc"
 #include "CustomTessellation.cginc"
+#include "UnityLightingCommon.cginc"
 
 float _BendRotationRandom;
 
@@ -23,6 +24,8 @@ float _PlayerRadius;
 float4 _TopColor;
 float4 _BottomColor;
 
+float _TranslucentGain;
+
 // Simple noise function, sourced from http://answers.unity.com/answers/624136/view.html
 // Extended discussion on this function can be found at the following link:
 // https://forum.unity.com/threads/am-i-over-complicating-this-random-function.454887/#post-2949326
@@ -36,15 +39,21 @@ struct grassGeometryOutput
 {
 	float4 pos : SV_POSITION;
 	float2 uv : TEXCOORD0;
+	float3 normal : NORMAL;
 	unityShadowCoord4 _ShadowCoord : TEXCOORD1;
 };
 
-grassGeometryOutput VertexOutput(float3 pos, float2 uv)
+grassGeometryOutput VertexOutput(float3 pos, float2 uv,float3 normal)
 {
 	grassGeometryOutput o;
 	o.pos = UnityObjectToClipPos(pos);
 	o.uv = uv;
 	o._ShadowCoord = ComputeScreenPos(o.pos);
+	o.normal = UnityObjectToWorldNormal(normal);
+	#if UNITY_PASS_SHADOWCASTER
+	// Applying the bias prevents artifacts from appearing on the surface.
+	o.pos = UnityApplyLinearShadowBias(o.pos);
+	#endif
 	return o;
 }
 
@@ -112,23 +121,17 @@ void grassGeo(triangle vertexOutput IN[3], inout TriangleStream<grassGeometryOut
 
 	float height = (rand(pos.zyx) * 2 - 1) * _BladeHeightRandom + _BladeHeight;
 	float width = (rand(pos.xzy) * 2 - 1) * _BladeWidthRandom + _BladeWidth;
+	float3 tangentNormal = float3(0, -1, 0);
+	float3 localNormal = mul(transformationMatrixFacing, tangentNormal);
 
 	// 应用在底部的两个顶点
-	triStream.Append(VertexOutput(pos + mul(transformationMatrixFacing, float3(width, 0, 0)), float2(0, 0)));
-	triStream.Append(VertexOutput(pos + mul(transformationMatrixFacing, float3(-width, 0, 0)), float2(1, 0)));
-	triStream.Append(VertexOutput(pos + mul(transformationMatrix, float3(0, 0, height)), float2(0.5, 1)));
+	triStream.Append(VertexOutput(pos + mul(transformationMatrixFacing, float3(width, 0, 0)), float2(0, 0),localNormal));
+	triStream.Append(VertexOutput(pos + mul(transformationMatrixFacing, float3(-width, 0, 0)), float2(1, 0),localNormal));
+	localNormal = mul(transformationMatrix, tangentNormal);
+	triStream.Append(VertexOutput(pos + mul(transformationMatrix, float3(0, 0, height)), float2(0.5, 1),localNormal));
 
 }
 
-float4 grassColfrag (grassGeometryOutput i,fixed facing : VFACE): SV_Target
-{
-	return lerp(_BottomColor, _TopColor, i.uv.y);
-}
-
-float4 grassShadowfrag(grassGeometryOutput i) : SV_Target
-{
-	SHADOW_CASTER_FRAGMENT(i)
-}
 
 //LZX-Rider-2025-05-27-001
 
