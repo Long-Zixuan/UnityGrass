@@ -20,7 +20,7 @@ Shader "Toon/Grass"
     	
     	_WindStrength("风力强度（Wind Strength）", Float) = 1
     	
-    	_PlayerPos("Player Position", Vector) = (0,0,0)
+    	[HideInInspector]_PlayerPos("Player Position", Vector) = (0,0,0)
     	_PlayerRadius("玩家碰撞体半径（Player Radius）",Float) = 1
     }
     
