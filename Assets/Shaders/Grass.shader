@@ -14,7 +14,7 @@ Shader "Toon/Grass"
 		_BladeHeight("草高度（Blade Height）", Float) = 0.5
 		_BladeHeightRandom("草高度随机种子（Blade Height Random）", Float) = 0.3
     	
-    	_TessellationUniform("草坪密度（Tessellation Uniform）", Range(1, 64)) = 1
+    	_TessellationUniform1("草坪密度（Tessellation Uniform）", Range(1, 64)) = 1
     	[Header(Wind)]
     	_WindDistortionMap("风力噪声图（Wind Distortion Map）", 2D) = "white" {}
 		_WindFrequency("摆动频率（Wind Frequency）", Vector) = (0.05, 0.05, 0, 0)
@@ -34,10 +34,10 @@ Shader "Toon/Grass"
 			Tags
 			{
 				"RenderType" = "Opaque"
-				"LightMode" = "ForwardBase"
+				"LightMode" = "UniversalForward"
 			}
 
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             #pragma geometry grassGeo
@@ -45,30 +45,66 @@ Shader "Toon/Grass"
 			#pragma domain domain
 			#pragma target 4.6
             #pragma multi_compile_fwdbase
-            #include "Grass.cginc"
-            float4 frag (grassGeometryOutput i,fixed facing : VFACE): SV_Target
+			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+			#pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #include "./lib/Grass.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            float4 frag (grassGeometryOutput i,half facing : VFACE): SV_Target
 			{
 				float3 normal = facing > 0 ? i.normal : -i.normal;
 
-				float shadow = SHADOW_ATTENUATION(i);
-				float NdotL = saturate(saturate(dot(normal, _WorldSpaceLightPos0)) + _TranslucentGain) * shadow;
+				//float4 SHADOW_COORDS = TransformWorldToShadowCoord(i._ShadowCoord);//SHADOW_ATTENUATION(i);
+				Light mainLight = GetMainLight(i._ShadowCoord);
+				half shadow = mainLight.shadowAttenuation;
+				float NdotL = saturate(saturate(dot(normal, _MainLightPosition.xyz)) + _TranslucentGain) * shadow;
 
-				float3 ambient = ShadeSH9(float4(normal, 1));
-				float4 lightIntensity = NdotL * _LightColor0 + float4(ambient, 1);
+				float3 ambient = SampleSH(float4(normal, 1).xyz);
+				float4 lightIntensity = NdotL * _MainLightColor + float4(ambient, 1);
 				float4 col = lerp(_BottomColor, _TopColor * lightIntensity, i.uv.y);
 
 				return col;
 			}
-            ENDCG
+            ENDHLSL
         }
 		Pass
+        {
+            Name "ShadowCaster"
+            Tags{"LightMode" = "ShadowCaster"}
+
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull[_Cull]
+
+            HLSLPROGRAM
+            #pragma exclude_renderers gles gles3 glcore
+            #pragma target 4.5
+
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature_local_fragment _ALPHATEST_ON
+            #pragma shader_feature_local_fragment _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #pragma multi_compile _ DOTS_INSTANCING_ON
+
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/LitInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
+            ENDHLSL
+        }
+		/*Pass
 		{
 			Tags
 			{
 				"LightMode" = "ShadowCaster"
 			}
 
-			CGPROGRAM
+			HLSLPROGRAM
 			#pragma vertex vert
 			#pragma geometry grassGeo
 			#pragma fragment grassShadowfrag
@@ -76,12 +112,12 @@ Shader "Toon/Grass"
 			#pragma domain domain
 			#pragma target 4.6
 			#pragma multi_compile_shadowcaster
-			#include "Grass.cginc"
+			#include "Grass.hlsl"
 			float4 grassShadowfrag(grassGeometryOutput i) : SV_Target
 			{
 				SHADOW_CASTER_FRAGMENT(i)
 			}
-			ENDCG
-		}
+			ENDHLSL
+		}*/
     }
 }

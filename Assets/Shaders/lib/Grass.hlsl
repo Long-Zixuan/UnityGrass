@@ -1,7 +1,9 @@
-#include "UnityCG.cginc"
-#include "Autolight.cginc"
-#include "CustomTessellation.cginc"
-#include "UnityLightingCommon.cginc"
+//#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+#include "CustomTessellation.hlsl"
+
+#define UNITY_PI 3.1415926
+#define UNITY_TWO_PI 6.2831853
 
 float _BendRotationRandom;
 
@@ -10,6 +12,7 @@ float _BladeHeightRandom;
 float _BladeWidth;
 float _BladeWidthRandom;
 
+//TEXTURE2D(_WindDistortionMap);SAMPLER(sampler_WindDistortionMap);
 sampler2D _WindDistortionMap;
 float4 _WindDistortionMap_ST;
 
@@ -40,16 +43,17 @@ struct grassGeometryOutput
 	float4 pos : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	float3 normal : NORMAL;
-	unityShadowCoord4 _ShadowCoord : TEXCOORD1;
+	float4 _ShadowCoord : TEXCOORD1;
 };
 
 grassGeometryOutput VertexOutput(float3 pos, float2 uv,float3 normal)
 {
 	grassGeometryOutput o;
-	o.pos = UnityObjectToClipPos(pos);
+	o.pos = TransformObjectToHClip(pos);
 	o.uv = uv;
-	o._ShadowCoord = ComputeScreenPos(o.pos);
-	o.normal = UnityObjectToWorldNormal(normal);
+	float3 worldPos = TransformObjectToWorld(pos);
+	o._ShadowCoord = TransformWorldToShadowCoord(worldPos);
+	o.normal = TransformObjectToWorldNormal(normal);
 	#if UNITY_PASS_SHADOWCASTER
 	// Applying the bias prevents artifacts from appearing on the surface.
 	o.pos = UnityApplyLinearShadowBias(o.pos);
@@ -89,10 +93,10 @@ float3x3 AngleAxis3x3(float angle, float3 axis)
 [maxvertexcount(3)]
 void grassGeo(triangle vertexOutput IN[3], inout TriangleStream<grassGeometryOutput> triStream)
 {
-    float3 pos = IN[0].vertex;
+    float3 pos = IN[0].vertex.xyz;
 	float3 vNormal = IN[0].normal;
 	float4 vTangent = IN[0].tangent;
-	float3 vBinormal = cross(vNormal, vTangent) * vTangent.w;
+	float3 vBinormal = cross(vNormal.xyz, vTangent.xyz) * vTangent.w;
 	float3x3 tangentToLocal = float3x3(
 		vTangent.x, vBinormal.x, vNormal.x,
 		vTangent.y, vBinormal.y, vNormal.y,
@@ -111,8 +115,10 @@ void grassGeo(triangle vertexOutput IN[3], inout TriangleStream<grassGeometryOut
 	float3x3 playerRotationMatrix = AngleAxis3x3(UNITY_PI * playerSample, playerAixs);
 
 	float2 windSample = (tex2Dlod(_WindDistortionMap, float4(uv, 0, 0)).xy * 2 - 1) * _WindStrength;
+//	float2 windSample = (SAMPLE_TEXTURE2D(_WindDistortionMap,sampler_WindDistortionMap, uv).xy * 2 - 1) * _WindStrength;
+	
 	float3 wind = normalize(float3(windSample.x, windSample.y, 0));
-	float3x3 windRotation = AngleAxis3x3(UNITY_PI * windSample, wind);
+	float3x3 windRotation = AngleAxis3x3(UNITY_PI * windSample.x, wind);
 
 
     float3x3 transformationMatrix = mul(mul(mul(mul(tangentToLocal, windRotation),playerRotationMatrix), facingRotationMatrix), bendRotationMatrix);

@@ -82,14 +82,15 @@ Material:
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _PlayerRadius: 1.17
+    - _PlayerRadius: 1.51
     - _Rotation: 0
     - _RotationRandom: 0.174
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _TessellationUniform: 10
-    - _TranslucentGain: 0.496
+    - _TessellationUniform1: 10
+    - _TranslucentGain: 0.164
     - _UVSec: 0
     - _WindScale: 1
     - _WindStrength: 1

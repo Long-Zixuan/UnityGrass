@@ -37,29 +37,29 @@ vertexOutput tessVert(vertexInput v)
 	return o;
 }
 
-float _TessellationUniform;
+float _TessellationUniform1;
 
 TessellationFactors patchConstantFunction (InputPatch<vertexInput, 3> patch)
 {
 	TessellationFactors f;
-	f.edge[0] = _TessellationUniform;
-	f.edge[1] = _TessellationUniform;
-	f.edge[2] = _TessellationUniform;
-	f.inside = _TessellationUniform;
+	f.edge[0] = _TessellationUniform1;
+	f.edge[1] = _TessellationUniform1;
+	f.edge[2] = _TessellationUniform1;
+	f.inside = _TessellationUniform1;
 	return f;
 }
 
-[UNITY_domain("tri")]
-[UNITY_outputcontrolpoints(3)]
-[UNITY_outputtopology("triangle_cw")]
-[UNITY_partitioning("integer")]
-[UNITY_patchconstantfunc("patchConstantFunction")]
+[domain("tri")]
+[outputcontrolpoints(3)]
+[outputtopology("triangle_cw")]
+[partitioning("integer")]
+[patchconstantfunc("patchConstantFunction")]
 vertexInput hull (InputPatch<vertexInput, 3> patch, uint id : SV_OutputControlPointID)
 {
 	return patch[id];
 }
 
-[UNITY_domain("tri")]
+[domain("tri")]
 vertexOutput domain(TessellationFactors factors, OutputPatch<vertexInput, 3> patch, float3 barycentricCoordinates : SV_DomainLocation)
 {
 	vertexInput v;
