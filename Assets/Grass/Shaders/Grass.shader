@@ -45,7 +45,7 @@ Shader "Toon/Grass"
 			#pragma domain domain
 			#pragma target 4.6
             #pragma multi_compile_fwdbase
-            #include "Grass.cginc"
+            #include "./lib/Grass.cginc"
             float4 frag (grassGeometryOutput i,fixed facing : VFACE): SV_Target
 			{
 				float3 normal = facing > 0 ? i.normal : -i.normal;
@@ -76,7 +76,7 @@ Shader "Toon/Grass"
 			#pragma domain domain
 			#pragma target 4.6
 			#pragma multi_compile_shadowcaster
-			#include "Grass.cginc"
+			#include "./lib/Grass.cginc"
 			float4 grassShadowfrag(grassGeometryOutput i) : SV_Target
 			{
 				SHADOW_CASTER_FRAGMENT(i)
